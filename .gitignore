@@ -1,0 +1,7 @@
+# Build inputs, never committed: the godot-sandbox libraries, the guest and the weights
+/addons/godot_sandbox/bin/libgodot_riscv.*
+/skintokens.elf
+/skintokens.elf.uid
+/w
+/.godot/
+*.pck
