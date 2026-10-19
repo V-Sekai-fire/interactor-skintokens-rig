@@ -2,7 +2,8 @@
 # Browser: index.html?models=<dir URL>&mesh=<GLB URL>&opts=<K=V+...>&mem=<MiB>; mesh=local reads
 # the parent page's window.__rig_mesh_b64. Desktop: -- models=<dir> mesh=<GLB> out=<GLB>, paths
 # relative to the program's folder. The guest names files by path; the browser host turns a
-# path into an HTTP range request, the desktop host into a file read.
+# path into an HTTP range request, the desktop host into a file read. On the desktop, opts trace=1
+# also saves the weight transfer's inputs as <out>.stkt for skintokens-transfer-replay.
 extends Node
 
 const WAIT_GPU := 1
@@ -238,6 +239,20 @@ func run():
 				return fail("cannot write %s" % q.out)
 			f.store_buffer(out)
 			f.close()
+			var tsize := int(_sb.vmcall("skintokens_trace_size")) if _sb.has_function("skintokens_trace_size") else 0
+			if tsize > 0:
+				var trace := PackedByteArray()
+				while trace.size() < tsize:
+					var piece: PackedByteArray = _sb.vmcall("skintokens_trace_chunk", trace.size(), tsize - trace.size())
+					if piece.is_empty():
+						return fail("trace_chunk returned nothing at %d of %d" % [trace.size(), tsize])
+					trace.append_array(piece)
+				var tf := FileAccess.open(local_path(q.out) + ".stkt", FileAccess.WRITE)
+				if tf == null:
+					return fail("cannot write %s.stkt" % q.out)
+				tf.store_buffer(trace)
+				tf.close()
+				say("TRACE bytes=%d" % tsize)
 		get_tree().quit(0)
 		return
 	publish({"state": "done", "ms": ms, "frames": frames, "bytes": out.size(), "sha256": sha,
